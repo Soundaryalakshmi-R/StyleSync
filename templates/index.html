@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Image Search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="content">
+        <h1 class="title">👗 Fashion Image Search</h1>
+        <p class="subtitle">Find similar outfits using text, an image, or both!</p>
+
+        <!-- Selection Buttons -->
+        <div class="search-options">
+            <button onclick="showSearchOption('text')">🔤 Search by Text</button>
+            <button onclick="showSearchOption('image')">🖼️ Search by Image</button>
+            <button onclick="showSearchOption('camera')">📷 Capture Image</button>
+        </div>
+
+        <!-- Search Form -->
+        <form method="POST" enctype="multipart/form-data">
+            <div id="text-search" class="hidden">
+                <input type="text" name="query_text" placeholder="Enter a description (e.g., 'red floral dress')">
+            </div>
+
+            <div id="image-search" class="hidden">
+                <input type="file" name="uploaded_image" accept="image/*">
+            </div>
+
+            <div id="camera-search" class="hidden">
+                <video id="video" autoplay></video>
+                <button type="button" onclick="captureImage()">📸 Capture</button>
+                <canvas id="canvas" style="display: none;"></canvas>
+                <input type="hidden" name="captured_image" id="captured_image">
+            </div>
+
+            <button type="submit">🔍 Search</button>
+        </form>
+
+        {% if search_image_path %}
+            <h3 class="center-text">📸 Your Image:</h3>
+            <img src="{{ search_image_path }}" alt="Uploaded Image" class="uploaded-img">
+        {% endif %}
+
+        <!-- Search Results -->
+        {% if results %}
+            <h2 class="center-text">🎀 Top 10 Similar Products:</h2>
+            <div class="search-results"> <!-- ✅ Added missing div -->
+                <div class="grid">
+                    {% for res in results["matches"][:10] %}  <!-- Ensuring only 10 images are shown -->
+                        <div class="item">
+                            <p>Score: {{ "%.2f"|format(res["score"]) }}</p>
+                            {% if res["metadata"]["image_path"] %}
+                                <img src="{{ url_for('static', filename='images/' + res['metadata']['image_path']) }}" alt="Similar Product"> 
+                                {% else %}
+                                <p>❌ Image not found</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if warning %}
+            <p class="warning">{{ warning }}</p>
+        {% endif %}
+    </div>
+
+    <!-- JavaScript for Image Search & Camera -->
+    <script>
+        function showSearchOption(option) {
+            document.getElementById("text-search").style.display = "none";
+            document.getElementById("image-search").style.display = "none";
+            document.getElementById("camera-search").style.display = "none";
+        
+            document.getElementById(option + "-search").style.display = "block";
+        
+            if (option === "camera") {
+                startCamera();
+            }
+        }
+
+        function startCamera() {
+            const video = document.getElementById("video");
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        video.srcObject = stream;
+                    })
+                    .catch(err => {
+                        alert("Camera access denied. Please allow camera permissions.");
+                        console.error("Error accessing camera:", err);
+                    });
+            } else {
+                alert("Your browser does not support camera access.");
+            }
+        }
+        
+        function captureImage() {
+            const video = document.getElementById("video");
+            const canvas = document.getElementById("canvas");
+            const context = canvas.getContext("2d");
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL("image/png");
+            document.getElementById("captured_image").value = imageData;
+        }
+    </script>
+</body>
+</html>
